@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文稿到画面：用 AI 生成统一风格的分镜图片</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            background: linear-gradient(135deg, #fafbfc 0%, #f1f3f5 100%);
+            min-height: 100vh;
+            color: #2d3748;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            position: relative;
+        }
+
+        /* 左上角课程总名字 */
+        .course-brand {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: white;
+            padding: 12px 20px;
+            border-radius: 25px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+
+        .course-brand:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+        }
+
+        .course-brand-icon {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            color: #1a202c;
+        }
+
+        .course-brand-icon::before {
+            content: "🎬";
+            font-size: 1.2rem;
+        }
+
+        .course-brand-text {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        /* 简洁的标题区域 */
+        .hero-section {
+            margin-bottom: 60px;
+        }
+
+        .hero-title {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 50px 30px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .hero-title h1 {
+            font-size: 2.8rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: #1a202c;
+            line-height: 1.2;
+        }
+
+        .workflow-badge {
+            display: inline-block;
+            background: #667eea;
+            padding: 12px 24px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            font-size: 0.95rem;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.25);
+        }
+
+        /* 图片画廊 - 平衡的三等分布局 */
+        .main-gallery {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 60px;
+        }
+
+        .gallery-item {
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+            background: white;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            height: 280px;
+        }
+
+        .gallery-item:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+        }
+
+        .gallery-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+
+        /* Workflow 区域 */
+        .workflow-section {
+            margin-bottom: 60px;
+        }
+
+        .workflow-card {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            text-align: center;
+        }
+
+        .workflow-card h2 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #1a202c;
+            margin-bottom: 30px;
+        }
+
+        .workflow-steps {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .step {
+            background: #667eea;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+
+        .arrow {
+            color: #667eea;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        /* 内容区域 - 垂直排列 */
+        .content-section {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            margin-bottom: 60px;
+        }
+
+        .content-card {
+            background: white;
+            border-radius: 12px;
+            padding: 32px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .content-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .card-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            margin-right: 16px;
+            color: white;
+            font-weight: 500;
+        }
+
+        .icon-goal { background: #667eea; }
+        .icon-mindset { background: #f093fb; }
+        .icon-content { background: #4facfe; }
+
+        .card-header h2 {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: #1a202c;
+        }
+
+        .highlight-text {
+            background: #f7fafc;
+            padding: 20px;
+            border-radius: 8px;
+            font-weight: 500;
+            color: #4a5568;
+            margin: 16px 0;
+            border-left: 4px solid #667eea;
+            line-height: 1.6;
+        }
+
+        /* 课程内容点 */
+        .main-points {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+            margin: 24px 0;
+        }
+
+        .point-card {
+            background: #f8fafc;
+            padding: 24px;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            border: 1px solid #e2e8f0;
+        }
+
+        .point-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            background: white;
+        }
+
+        .point-card h3 {
+            color: #2d3748;
+            font-size: 1.1rem;
+            margin-bottom: 12px;
+            font-weight: 600;
+            line-height: 1.4;
+        }
+
+        .point-card p {
+            color: #718096;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .sub-points {
+            margin-top: 16px;
+        }
+
+        .sub-points li {
+            background: white;
+            margin: 8px 0;
+            padding: 12px 16px;
+            border-radius: 6px;
+            color: #4a5568;
+            font-size: 0.9rem;
+            border: 1px solid #e2e8f0;
+            list-style: none;
+        }
+
+        .sub-points li:before {
+            content: "•";
+            color: #667eea;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+
+        /* 技巧区域 */
+        .tips-section {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            margin-top: 40px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .tips-header {
+            text-align: center;
+            margin-bottom: 36px;
+        }
+
+        .tips-header h3 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #1a202c;
+            margin-bottom: 8px;
+        }
+
+        .tips-header p {
+            color: #718096;
+            font-size: 1rem;
+        }
+
+        .tips-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .tip-card {
+            background: #f8fafc;
+            padding: 24px;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            transition: all 0.3s ease;
+        }
+
+        .tip-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            background: white;
+        }
+
+        .tip-card strong {
+            color: #2d3748;
+            display: block;
+            margin-bottom: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .tip-card p {
+            color: #4a5568;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        /* 特定颜色的tip卡片 */
+        .tip-card:nth-child(1) { border-left: 4px solid #667eea; }
+        .tip-card:nth-child(2) { border-left: 4px solid #f093fb; }
+        .tip-card:nth-child(3) { border-left: 4px solid #4facfe; }
+        .tip-card:nth-child(4) { border-left: 4px solid #feca57; }
+        .tip-card:nth-child(5) { border-left: 4px solid #ff6b6b; }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px 16px;
+            }
+
+            .hero-title h1 {
+                font-size: 2.2rem;
+            }
+
+            .hero-title {
+                padding: 30px 20px;
+            }
+
+            .main-gallery {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .gallery-item {
+                height: 240px;
+            }
+
+            .main-points {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .workflow-steps {
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .arrow {
+                transform: rotate(90deg);
+            }
+
+            .content-card,
+            .tips-section {
+                padding: 24px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .hero-title h1 {
+                font-size: 1.8rem;
+            }
+
+            .main-gallery {
+                grid-template-rows: repeat(3, 240px);
+            }
+
+            .course-brand {
+                top: 10px;
+                left: 10px;
+                padding: 8px 12px;
+            }
+
+            .course-brand-text {
+                font-size: 0.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 左上角课程总名字 -->
+    <div class="course-brand">
+        <div class="course-brand-icon">
+            <span class="course-brand-text">零基础做AI动画: 1分钟短片创作</span>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- 简洁的标题区域 -->
+        <div class="hero-section">
+            <div class="hero-title">
+                <h1>文稿到画面：用 AI 生成统一风格的分镜图片</h1>
+            </div>
+
+            <!-- 主要图片展示区域 -->
+            <div class="main-gallery">
+                <div class="gallery-item">
+                    <img src="1.png" alt="室内温馨场景">
+                </div>
+                <div class="gallery-item">
+                    <img src="0.png" alt="角色设计">
+                </div>
+                <div class="gallery-item">
+                    <img src="2.png" alt="工作场景">
+                </div>
+            </div>
+        </div>
+
+        <!-- Workflow 区域 -->
+        <div class="workflow-section">
+            <div class="workflow-card">
+                <h2>🎬 AI视频制作流程</h2>
+                <div class="workflow-steps">
+                    <div class="step">文稿</div>
+                    <div class="arrow">→</div>
+                    <div class="step">角色定妆</div>
+                    <div class="arrow">→</div>
+                    <div class="step">视频分镜</div>
+                    <div class="arrow">→</div>
+                    <div class="step">视频生成</div>
+                    <div class="arrow">→</div>
+                    <div class="step">剪辑</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 内容区域 -->
+        <div class="content-section">
+            <div class="content-card">
+                <div class="card-header">
+                    <div class="card-icon icon-goal">🎯</div>
+                    <h2>课程目标</h2>
+                </div>
+                <div class="highlight-text">
+                    高效生成风格一致的视频分镜，用于视频的画面生成
+                </div>
+            </div>
+
+            <div class="content-card">
+                <div class="card-header">
+                    <div class="card-icon icon-mindset">🎭</div>
+                    <h2>心态准备</h2>
+                </div>
+                <div class="highlight-text">
+                    角色转换——把自己转化成导演的身份，AI是工具，本质是为了更好地帮我们创作
+                </div>
+            </div>
+
+            <div class="content-card">
+                <div class="card-header">
+                    <div class="card-icon icon-content">📚</div>
+                    <h2>课程内容</h2>
+                </div>
+
+                <div class="main-points">
+                    <div class="point-card">
+                        <h3>1. 文稿转化为视频脚本</h3>
+                        <p>用AI帮忙生成画面脚本，将文字内容转换为可视化的分镜描述</p>
+                    </div>
+
+                    <div class="point-card">
+                        <h3>2. 用AI进行画面生成</h3>
+                        <div class="sub-points">
+                            <li><strong>对背景不控制：</strong>使用ChatGPT进行基础画面生成</li>
+                            <li><strong>控制背景风格：</strong>使用nano banana/loveart
+                                <div style="margin-top: 12px; padding-left: 16px;">
+                                    <div style="margin: 6px 0; color: #718096; font-size: 0.85rem;">• 找特定风格的图片</div>
+                                    <div style="margin: 6px 0; color: #718096; font-size: 0.85rem;">• 先生成背景图片</div>
+                                    <div style="margin: 6px 0; color: #718096; font-size: 0.85rem;">• 再结合人物生成图片</div>
+                                </div>
+                            </li>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 技巧部分 -->
+        <div class="tips-section">
+            <div class="tips-header">
+                <h3>💡 实用技巧</h3>
+                <p>掌握这些技巧，让你的AI画面生成事半功倍</p>
+            </div>
+
+            <div class="tips-grid">
+                <div class="tip-card">
+                    <strong>nano的比例问题</strong>
+                    <p>用垫图的方式处理比例问题，确保画面构图合理</p>
+                </div>
+                <div class="tip-card">
+                    <strong>如何写prompt</strong>
+                    <p>使用自然语言描述，把AI想象成人的角色，告诉它你要什么</p>
+                </div>
+                <div class="tip-card">
+                    <strong>控制程度</strong>
+                    <p>给AI一点发挥的空间，把AI当成有设计能力的creative director，而不只是纯工具</p>
+                </div>
+                <div class="tip-card">
+                    <strong>参考图</strong>
+                    <p>图片能够传递很多信息，一张好的reference图片事半功倍</p>
+                </div>
+                <div class="tip-card">
+                    <strong>画面设计</strong>
+                    <p>画草图来垫图，先构思再生成，提高成功率</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
